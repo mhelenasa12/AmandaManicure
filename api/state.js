@@ -17,7 +17,7 @@ function json(body, status) {
   });
 }
 
-export default async function handler(request) {
+async function handleRequest(request) {
   if (!checkAuth(request)) {
     return json({ error: 'unauthorized' }, 401);
   }
@@ -66,4 +66,12 @@ export default async function handler(request) {
   }
 
   return json({ error: 'method_not_allowed' }, 405);
+}
+
+export async function GET(request) {
+  return handleRequest(request);
+}
+
+export async function POST(request) {
+  return handleRequest(request);
 }
