@@ -86,13 +86,13 @@ function seedState(){
       { id:'s11', name:'Decoração (Todas)', value:30 }
     ],
     planoContas: [
-      { id:'p1', name:'Produtos e Insumos' },
-      { id:'p2', name:'Equipamentos' },
-      { id:'p3', name:'Aluguel do Espaço' },
-      { id:'p4', name:'Marketing e Divulgação' },
-      { id:'p5', name:'Transporte' },
-      { id:'p6', name:'Taxas e Impostos' },
-      { id:'p7', name:'Outros' }
+      { id:'p1', name:'Produtos e Insumos', parentId:null },
+      { id:'p2', name:'Equipamentos', parentId:null },
+      { id:'p3', name:'Aluguel do Espaço', parentId:null },
+      { id:'p4', name:'Marketing e Divulgação', parentId:null },
+      { id:'p5', name:'Transporte', parentId:null },
+      { id:'p6', name:'Taxas e Impostos', parentId:null },
+      { id:'p7', name:'Outros', parentId:null }
     ],
     entradas: [], saidas: [], anamneses: [], seq: 1
   };
@@ -104,12 +104,23 @@ function normalizeState(s){
   s.saidas = s.saidas || [];
   s.anamneses = s.anamneses || [];
   s.services = s.services || [];
-  s.planoContas = s.planoContas || [];
+  s.planoContas = (s.planoContas || []).map(function(p){ if(p.parentId===undefined) p.parentId = null; return p; });
   return s;
 }
 
 function SERVICE_BY_ID(id){ var r=null; STATE.services.forEach(function(s){ if(s.id===id) r=s; }); return r; }
 function PLANO_BY_ID(id){ var r=null; STATE.planoContas.forEach(function(p){ if(p.id===id) r=p; }); return r; }
+function PLANO_CATEGORIES(){ return STATE.planoContas.filter(function(p){ return !p.parentId; }); }
+function PLANO_SUBCATEGORIES(parentId){ return STATE.planoContas.filter(function(p){ return p.parentId===parentId; }); }
+function planoFullLabel(id){
+  var item = PLANO_BY_ID(id);
+  if(!item) return '';
+  if(item.parentId){
+    var parent = PLANO_BY_ID(item.parentId);
+    return (parent ? parent.name+' › ' : '') + item.name;
+  }
+  return item.name;
+}
 function ENTRADA_BY_ID(id){ var r=null; STATE.entradas.forEach(function(e){ if(e.id===id) r=e; }); return r; }
 function SERVICES_BY_IDS(ids){ return (ids||[]).map(function(id){ return SERVICE_BY_ID(id); }).filter(Boolean); }
 function sumServicesValue(ids){ return SERVICES_BY_IDS(ids).reduce(function(acc,s){ return acc + (Number(s.value)||0); }, 0); }
@@ -341,9 +352,18 @@ function paymentSelectHtml(){
   return '<select name="formaPagamento">'+opts+'</select>';
 }
 function planoContasSelectHtml(){
-  if(!STATE.planoContas.length) return '<select disabled><option>Cadastre um plano de contas em Configurações</option></select>';
-  var opts = STATE.planoContas.map(function(p){ return '<option value="'+p.id+'">'+escapeHtml(p.name)+'</option>'; }).join('');
-  return '<select name="planoContaId">'+opts+'</select>';
+  var categorias = PLANO_CATEGORIES();
+  if(!categorias.length) return '<select disabled><option>Cadastre um plano de contas em Configurações</option></select>';
+  var html = categorias.map(function(cat){
+    var subs = PLANO_SUBCATEGORIES(cat.id);
+    if(!subs.length){
+      return '<option value="'+cat.id+'">'+escapeHtml(cat.name)+'</option>';
+    }
+    var options = '<option value="'+cat.id+'">'+escapeHtml(cat.name)+' — geral</option>'
+      + subs.map(function(sub){ return '<option value="'+sub.id+'">'+escapeHtml(sub.name)+'</option>'; }).join('');
+    return '<optgroup label="'+escapeHtml(cat.name)+'">'+options+'</optgroup>';
+  }).join('');
+  return '<select name="planoContaId">'+html+'</select>';
 }
 function saidasTableHtml(rows){
   if(!rows.length) return emptyState('Nenhuma saída registrada ainda.');
@@ -396,7 +416,7 @@ function submitSaida(form){
   var plano = PLANO_BY_ID(planoContaId);
   STATE.saidas.push({
     id: uid('sa_'), date: fd.get('date')||todayISO(), fornecedor: (fd.get('fornecedor')||'').toString().trim(),
-    valor: valor, formaPagamento: fd.get('formaPagamento'), planoContaId: planoContaId, planoContaName: plano?plano.name:''
+    valor: valor, formaPagamento: fd.get('formaPagamento'), planoContaId: planoContaId, planoContaName: plano?planoFullLabel(planoContaId):''
   });
   toast('Saída salva.');
   persist();
@@ -666,23 +686,37 @@ function servicesListHtml(){
      + '</div></div>';
   }).join('');
 }
-function planosListHtml(){
-  if(!STATE.planoContas.length) return emptyState('Nenhuma categoria cadastrada.');
-  return STATE.planoContas.map(function(p){
-    if(draft.editingPlanoId===p.id){
-      return '<div class="svc-row">'
-       + '<input type="text" class="editrow-input" style="flex:1" value="'+escapeHtml(p.name)+'" data-edit="name">'
-       + '<div class="svc-actions">'
-       +   '<button type="button" class="btn btn-primary btn-sm" data-action="save-plano" data-id="'+p.id+'">Salvar</button>'
-       +   '<button type="button" class="btn btn-ghost btn-sm" data-action="cancel-edit-plano">Cancelar</button>'
-       + '</div></div>';
-    }
-    return '<div class="svc-row">'
-     + '<span class="svc-name">'+escapeHtml(p.name)+'</span>'
+function planoRowHtml(p, extraClass){
+  if(draft.editingPlanoId===p.id){
+    return '<div class="svc-row '+extraClass+'">'
+     + '<input type="text" class="editrow-input" style="flex:1" value="'+escapeHtml(p.name)+'" data-edit="name">'
      + '<div class="svc-actions">'
-     +   '<button type="button" class="btn btn-ghost btn-icon" data-action="edit-plano" data-id="'+p.id+'" aria-label="Editar">✎</button>'
-     +   '<button type="button" class="btn btn-ghost btn-icon" data-action="delete-plano" data-id="'+p.id+'" aria-label="Excluir">✕</button>'
+     +   '<button type="button" class="btn btn-primary btn-sm" data-action="save-plano" data-id="'+p.id+'">Salvar</button>'
+     +   '<button type="button" class="btn btn-ghost btn-sm" data-action="cancel-edit-plano">Cancelar</button>'
      + '</div></div>';
+  }
+  return '<div class="svc-row '+extraClass+'">'
+   + '<span class="svc-name">'+escapeHtml(p.name)+'</span>'
+   + '<div class="svc-actions">'
+   +   '<button type="button" class="btn btn-ghost btn-icon" data-action="edit-plano" data-id="'+p.id+'" aria-label="Editar">✎</button>'
+   +   '<button type="button" class="btn btn-ghost btn-icon" data-action="delete-plano" data-id="'+p.id+'" aria-label="Excluir">✕</button>'
+   + '</div></div>';
+}
+function planosListHtml(){
+  var categorias = PLANO_CATEGORIES();
+  if(!categorias.length) return emptyState('Nenhuma categoria cadastrada.');
+  return categorias.map(function(cat){
+    var subs = PLANO_SUBCATEGORIES(cat.id);
+    var subsHtml = subs.map(function(sub){ return planoRowHtml(sub, 'plano-sub-row'); }).join('');
+    var addSubForm = '<form data-form="nova-subcategoria" data-parent-id="'+cat.id+'" class="new-svc-form plano-sub-form">'
+      + '<input type="text" name="name" placeholder="Nova subcategoria de '+escapeHtml(cat.name)+'" required>'
+      + '<button type="submit" class="btn btn-secondary btn-sm">+ Subcategoria</button>'
+      + '</form>';
+    return '<div class="plano-cat-block">'
+     + planoRowHtml(cat, 'plano-cat-row')
+     + (subsHtml ? '<div class="plano-sub-list">'+subsHtml+'</div>' : '')
+     + addSubForm
+     + '</div>';
   }).join('');
 }
 function pageConfig(){
@@ -700,9 +734,10 @@ function pageConfig(){
   + '</div>'
   + '<div class="card">'
   +   '<div class="card-head"><h2>Plano de contas</h2></div>'
+  +   '<p class="help" style="margin-bottom:10px">Organize por categoria e, se quiser, crie subcategorias dentro de cada uma.</p>'
   +   planosListHtml()
   +   '<form data-form="novo-plano" class="new-svc-form">'
-  +     '<input type="text" name="name" placeholder="Nome da categoria" required>'
+  +     '<input type="text" name="name" placeholder="Nome da nova categoria" required>'
   +     '<button type="submit" class="btn btn-primary btn-sm">+ Adicionar categoria</button>'
   +   '</form>'
   + '</div>'
@@ -745,25 +780,51 @@ function submitNovoServico(form){
 }
 function savePlanoEdit(id, row){
   var name = row.querySelector('[data-edit="name"]').value.trim();
-  if(!name){ toast('Informe um nome para a categoria.', true); return; }
+  if(!name){ toast('Informe um nome.', true); return; }
   var p = PLANO_BY_ID(id);
-  if(p){ p.name = name; STATE.saidas.forEach(function(s){ if(s.planoContaId===id) s.planoContaName = name; }); }
+  if(p){
+    p.name = name;
+    STATE.saidas.forEach(function(s){ if(s.planoContaId===id) s.planoContaName = planoFullLabel(id); });
+    if(!p.parentId){
+      PLANO_SUBCATEGORIES(id).forEach(function(sub){
+        STATE.saidas.forEach(function(s){ if(s.planoContaId===sub.id) s.planoContaName = planoFullLabel(sub.id); });
+      });
+    }
+  }
   draft.editingPlanoId = null;
-  toast('Categoria atualizada.');
+  toast('Atualizado.');
   persist();
 }
 function deletePlano(id){
-  if(!confirm('Excluir esta categoria? As saídas já lançadas manterão o nome atual.')) return;
-  STATE.planoContas = STATE.planoContas.filter(function(p){return p.id!==id;});
-  toast('Categoria removida.');
+  var item = PLANO_BY_ID(id);
+  if(!item) return;
+  var isCategoria = !item.parentId;
+  var subs = isCategoria ? PLANO_SUBCATEGORIES(id) : [];
+  var msg = isCategoria
+    ? (subs.length ? 'Excluir esta categoria e suas '+subs.length+' subcategoria(s)? As saídas já lançadas manterão o nome atual.' : 'Excluir esta categoria? As saídas já lançadas manterão o nome atual.')
+    : 'Excluir esta subcategoria? As saídas já lançadas manterão o nome atual.';
+  if(!confirm(msg)) return;
+  var idsToRemove = [id].concat(subs.map(function(s){return s.id;}));
+  STATE.planoContas = STATE.planoContas.filter(function(p){ return idsToRemove.indexOf(p.id)<0; });
+  toast(isCategoria ? 'Categoria removida.' : 'Subcategoria removida.');
   persist();
 }
 function submitNovoPlano(form){
   var fd = new FormData(form);
   var name = (fd.get('name')||'').toString().trim();
   if(!name){ toast('Informe um nome para a categoria.', true); return; }
-  STATE.planoContas.push({ id: uid('p_'), name:name });
+  STATE.planoContas.push({ id: uid('p_'), name:name, parentId:null });
   toast('Categoria adicionada.');
+  persist();
+}
+function submitNovaSubcategoria(form){
+  var fd = new FormData(form);
+  var name = (fd.get('name')||'').toString().trim();
+  var parentId = form.getAttribute('data-parent-id');
+  if(!name){ toast('Informe um nome para a subcategoria.', true); return; }
+  if(!PLANO_BY_ID(parentId)){ toast('Categoria não encontrada.', true); return; }
+  STATE.planoContas.push({ id: uid('p_'), name:name, parentId:parentId });
+  toast('Subcategoria adicionada.');
   persist();
 }
 
@@ -1052,6 +1113,7 @@ function initEvents(){
     else if(kind==='anamnese') submitAnamnese(form);
     else if(kind==='novo-servico') submitNovoServico(form);
     else if(kind==='novo-plano') submitNovoPlano(form);
+    else if(kind==='nova-subcategoria') submitNovaSubcategoria(form);
     else if(kind==='gate-password'){
       var fd2 = new FormData(form);
       setStoredPassword((fd2.get('password')||'').toString());
