@@ -15,6 +15,7 @@ function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function
 function sumBy(arr, key){ return arr.reduce(function(acc,it){ return acc + (Number(it[key])||0); }, 0); }
 function inRange(iso, start, end){ return iso>=start && iso<=end; }
 function opt(val,label,current){ return '<option value="'+val+'"'+(val===current?' selected':'')+'>'+escapeHtml(label)+'</option>'; }
+function capitalize(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
 
 var MONTHS_LONG=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function currentYYYYMM(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
@@ -110,6 +111,17 @@ function normalizeState(s){
 function SERVICE_BY_ID(id){ var r=null; STATE.services.forEach(function(s){ if(s.id===id) r=s; }); return r; }
 function PLANO_BY_ID(id){ var r=null; STATE.planoContas.forEach(function(p){ if(p.id===id) r=p; }); return r; }
 function ENTRADA_BY_ID(id){ var r=null; STATE.entradas.forEach(function(e){ if(e.id===id) r=e; }); return r; }
+function SERVICES_BY_IDS(ids){ return (ids||[]).map(function(id){ return SERVICE_BY_ID(id); }).filter(Boolean); }
+function sumServicesValue(ids){ return SERVICES_BY_IDS(ids).reduce(function(acc,s){ return acc + (Number(s.value)||0); }, 0); }
+function entradaServicesList(e){
+  if(e.services && e.services.length) return e.services;
+  if(e.serviceId) return [{ serviceId:e.serviceId, serviceName:e.serviceName, value:e.value }];
+  return [];
+}
+function entradaServicesLabel(e){
+  var list = entradaServicesList(e);
+  return list.length ? list.map(function(s){ return s.serviceName; }).join(', ') : '—';
+}
 
 /* ================= ui-only prefs (per viewer, not published) ================= */
 var ui = {};
@@ -120,7 +132,7 @@ function saveUi(){ try{ sessionStorage.setItem('amanda-ui', JSON.stringify(ui));
 var draft = { entrada:null, anamnese:null, editingServiceId:null, editingPlanoId:null };
 function ensureEntradaDraft(){
   if(!draft.entrada){
-    draft.entrada = { date: todayISO(), client:'', serviceId:'', value:'', valueEdited:false, hasManutencao:false, weekChoice:'recomendada' };
+    draft.entrada = { date: todayISO(), client:'', serviceIds:[], value:'', valueEdited:false, hasManutencao:false, weekChoice:'recomendada' };
   }
   return draft.entrada;
 }
@@ -199,20 +211,23 @@ function pageInicio(){
 }
 
 /* ================= page: entradas ================= */
-function serviceSelectHtml(selectedId){
-  var opts = '<option value="">Selecione um serviço</option>';
-  STATE.services.forEach(function(s){
-    opts += '<option value="'+s.id+'"'+(s.id===selectedId?' selected':'')+'>'+escapeHtml(s.name)+' — '+fmtBRL(s.value)+'</option>';
-  });
-  return '<select name="serviceId" data-action="service-change">'+opts+'</select>';
+function servicesCheckboxHtml(selectedIds){
+  if(!STATE.services.length) return '<p class="help">Cadastre serviços em Configurações.</p>';
+  var rows = STATE.services.map(function(s){
+    var checked = selectedIds.indexOf(s.id)>=0 ? ' checked' : '';
+    return '<label class="checkbox-row" style="padding:5px 0">'
+      + '<input type="checkbox" name="serviceIds" value="'+s.id+'" data-action="service-toggle"'+checked+'>'
+      + '<span>'+escapeHtml(s.name)+' <span class="mono" style="color:var(--ink-mute);font-weight:500">— '+fmtBRL(s.value)+'</span></span>'
+      + '</label>';
+  }).join('');
+  return '<div class="service-check-list">'+rows+'</div>';
 }
 function valueFieldHtml(d){
-  var svc = SERVICE_BY_ID(d.serviceId);
+  var defaultTotal = sumServicesValue(d.serviceIds);
   if(d.valueEdited){
-    return '<div class="actions-row"><input type="number" step="0.01" min="0" name="value" value="'+(d.value===''?'':d.value)+'" style="max-width:140px" data-action="value-input"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-value">usar valor do serviço</button></div>';
+    return '<div class="actions-row"><input type="number" step="0.01" min="0" name="value" value="'+(d.value===''?'':d.value)+'" style="max-width:140px" data-action="value-input"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-value">usar valor calculado</button></div>';
   }
-  var shown = svc ? fmtBRL(svc.value) : '—';
-  return '<div class="actions-row"><input type="text" value="'+shown+'" readonly style="max-width:140px;background:var(--surface-3)"><button type="button" class="btn btn-ghost btn-sm" data-action="unlock-value">✎ editar</button></div>';
+  return '<div class="actions-row"><input type="text" value="'+fmtBRL(defaultTotal)+'" readonly style="max-width:140px;background:var(--surface-3)"><button type="button" class="btn btn-ghost btn-sm" data-action="unlock-value">✎ editar</button></div>';
 }
 function manutencaoBlockHtml(manutDate, weekOptions, chosen){
   var opts = weekOptions.map(function(w){
@@ -233,7 +248,7 @@ function entradasTableHtml(rows){
     return '<tr>'
       + '<td>'+fmtDateBR(e.date)+'</td>'
       + '<td>'+escapeHtml(e.client)+'</td>'
-      + '<td>'+escapeHtml(e.serviceName)+'</td>'
+      + '<td>'+escapeHtml(entradaServicesLabel(e))+'</td>'
       + '<td class="num">'+fmtBRL(e.value)+'</td>'
       + '<td>'+manutCell+'</td>'
       + '<td><button type="button" class="btn btn-ghost btn-icon" data-action="delete-entrada" data-id="'+e.id+'" aria-label="Excluir">✕</button></td>'
@@ -264,9 +279,11 @@ function pageEntradas(){
    +       field('Data do atendimento','<input type="date" name="date" value="'+d.date+'" required>')
    +       field('Cliente <span class="req">*</span>','<input type="text" name="client" placeholder="Nome da cliente" value="'+escapeHtml(d.client)+'" required>')
    +     '</div>'
-   +     '<div class="grid-2" style="margin-top:14px">'
-   +       field('Serviço', serviceSelectHtml(d.serviceId))
-   +       field('Valor', valueFieldHtml(d))
+   +     '<div style="margin-top:14px">'
+   +       field('Serviços <span class="req">*</span> <span class="help">(selecione um ou mais)</span>', servicesCheckboxHtml(d.serviceIds))
+   +     '</div>'
+   +     '<div style="margin-top:14px;max-width:220px">'
+   +       field('Valor total', valueFieldHtml(d))
    +     '</div>'
    +     '<div style="margin-top:16px">'
    +       '<label class="checkbox-row"><input type="checkbox" name="hasManutencao" '+(d.hasManutencao?'checked':'')+'><span>Esta cliente terá manutenção futura</span></label>'
@@ -287,16 +304,19 @@ function submitEntrada(form){
   var fd = new FormData(form);
   var date = fd.get('date') || todayISO();
   var client = (fd.get('client')||'').toString().trim();
-  var serviceId = fd.get('serviceId')||'';
-  var svc = SERVICE_BY_ID(serviceId);
+  var serviceIds = fd.getAll('serviceIds');
+  var services = SERVICES_BY_IDS(serviceIds);
   if(!client){ toast('Informe o nome da cliente.', true); return; }
-  if(!svc){ toast('Selecione um serviço.', true); return; }
+  if(!services.length){ toast('Selecione ao menos um serviço.', true); return; }
   var d = draft.entrada;
-  var value = d.valueEdited ? parseFloat(fd.get('value')) : svc.value;
-  if(isNaN(value) || value<0) value = svc.value;
+  var defaultTotal = sumServicesValue(serviceIds);
+  var value = d.valueEdited ? parseFloat(fd.get('value')) : defaultTotal;
+  if(isNaN(value) || value<0) value = defaultTotal;
   var hasManutencao = !!fd.get('hasManutencao');
   var entry = {
-    id: uid('e_'), date: date, client: client, serviceId: svc.id, serviceName: svc.name, value: value,
+    id: uid('e_'), date: date, client: client,
+    services: services.map(function(s){ return { serviceId: s.id, serviceName: s.name, value: s.value }; }),
+    value: value,
     hasManutencao: hasManutencao, manutencaoDate: null, weekStart: null, kanbanDay: null, contacted: false
   };
   if(hasManutencao){
@@ -385,8 +405,9 @@ function deleteSaida(id){ STATE.saidas = STATE.saidas.filter(function(s){return 
 
 /* ================= page: DFC ================= */
 function pageDFC(){
-  if(!ui.dfcMonth) ui.dfcMonth = currentYYYYMM();
-  var range = monthRange(ui.dfcMonth);
+  if(!ui.dfcYear) ui.dfcYear = String(new Date().getFullYear());
+  if(!ui.dfcMonth) ui.dfcMonth = pad2(new Date().getMonth()+1);
+  var range = yearMonthRange(ui.dfcYear, ui.dfcMonth);
   var entradasP = STATE.entradas.filter(function(e){ return inRange(e.date, range.start, range.end); });
   var saidasP = STATE.saidas.filter(function(s){ return inRange(s.date, range.start, range.end); });
   var faturado = sumBy(entradasP,'value');
@@ -406,7 +427,10 @@ function pageDFC(){
   return ''
   + '<div class="page-head"><div><span class="eyebrow">Financeiro</span><h1>DFC — Demonstrativo de Fluxo de Caixa</h1>'
   + '<p class="page-sub">Faturamento, recebimentos e saídas agrupadas por plano de contas.</p></div>'
-  + '<div class="field" style="max-width:190px"><label>Período</label><input type="month" value="'+ui.dfcMonth+'" data-action="dfc-month"></div>'
+  + '<div class="filter-row">'
+  +   '<div class="field" style="max-width:130px"><label>Ano</label>'+yearSelectHtml('dfc-year', ui.dfcYear)+'</div>'
+  +   '<div class="field" style="max-width:170px"><label>Mês</label>'+monthSelectHtml('dfc-month', ui.dfcMonth)+'</div>'
+  + '</div>'
   + '</div>'
   + '<div class="stat-grid">'
   +   statTile('Faturou', fmtBRL(faturado), entradasP.length+' atendimento(s)', 'accent')
@@ -503,7 +527,7 @@ function kanbanCardHtml(c){
   var opts = KANBAN_DAYS.map(function(day){ return '<option value="'+day+'"'+(day===c.kanbanDay?' selected':'')+'>'+day+'</option>'; }).join('');
   return '<div class="kcard'+(c.contacted?' done':'')+'">'
    + '<span class="kname">'+escapeHtml(c.client)+'</span>'
-   + '<span class="kmeta">'+escapeHtml(c.serviceName)+' · atendida em '+fmtDateBR(c.date)+'</span>'
+   + '<span class="kmeta">'+escapeHtml(entradaServicesLabel(c))+' · atendida em '+fmtDateBR(c.date)+'</span>'
    + '<span class="kmeta">manutenção prevista: '+fmtDateBR(c.manutencaoDate)+'</span>'
    + '<div class="kcard-foot">'
    +   '<select data-action="move-kanban-day" data-id="'+c.id+'">'+opts+'</select>'
@@ -543,23 +567,36 @@ function weekNext(){ ui.manutWeek = addDays(ui.manutWeek,7); saveUi(); render();
 function weekToday(){ ui.manutWeek = tueSatWeekStart(todayISO()); saveUi(); render(); }
 
 /* ================= page: indicadores ================= */
-function periodRange(key){
-  var now = todayISO();
-  if(key==='mes'){ return monthRange(currentYYYYMM()); }
-  if(key==='mes-passado'){
-    var d = parseISO(currentYYYYMM()+'-01'); d.setMonth(d.getMonth()-1);
-    var ym = d.getFullYear()+'-'+pad2(d.getMonth()+1);
-    return monthRange(ym);
-  }
-  if(key==='3meses'){
-    var d3 = parseISO(now); d3.setMonth(d3.getMonth()-3);
-    return { start: toISO(d3), end: now };
-  }
-  return { start:'0000-01-01', end:'9999-12-31' };
+function availableYears(){
+  var years = {};
+  STATE.entradas.forEach(function(e){ if(e.date) years[e.date.slice(0,4)] = true; });
+  STATE.saidas.forEach(function(s){ if(s.date) years[s.date.slice(0,4)] = true; });
+  years[String(new Date().getFullYear())] = true;
+  return Object.keys(years).sort();
+}
+function yearSelectHtml(action, selected){
+  var years = availableYears();
+  var opts = '<option value="todos"'+(selected==='todos'?' selected':'')+'>Todos os anos</option>'
+    + years.map(function(y){ return '<option value="'+y+'"'+(y===selected?' selected':'')+'>'+y+'</option>'; }).join('');
+  return '<select data-action="'+action+'">'+opts+'</select>';
+}
+function monthSelectHtml(action, selected){
+  var opts = '<option value="todos"'+(selected==='todos'?' selected':'')+'>Todos os meses</option>'
+    + MONTHS_LONG.map(function(name, idx){
+        var v = pad2(idx+1);
+        return '<option value="'+v+'"'+(v===selected?' selected':'')+'>'+capitalize(name)+'</option>';
+      }).join('');
+  return '<select data-action="'+action+'">'+opts+'</select>';
+}
+function yearMonthRange(year, month){
+  if(!year || year==='todos') return { start:'0000-01-01', end:'9999-12-31' };
+  if(!month || month==='todos') return { start: year+'-01-01', end: year+'-12-31' };
+  return monthRange(year+'-'+month);
 }
 function pageIndicadores(){
-  if(!ui.indPeriod) ui.indPeriod = 'mes';
-  var range = periodRange(ui.indPeriod);
+  if(!ui.indYear) ui.indYear = String(new Date().getFullYear());
+  if(!ui.indMonth) ui.indMonth = pad2(new Date().getMonth()+1);
+  var range = yearMonthRange(ui.indYear, ui.indMonth);
   var entradasP = STATE.entradas.filter(function(e){ return inRange(e.date, range.start, range.end); });
   var faturamento = sumBy(entradasP,'value');
   var atendimentos = entradasP.length;
@@ -567,9 +604,11 @@ function pageIndicadores(){
 
   var byService = {};
   entradasP.forEach(function(e){
-    if(!byService[e.serviceId]) byService[e.serviceId] = { name: e.serviceName, total:0, count:0 };
-    byService[e.serviceId].total += Number(e.value)||0;
-    byService[e.serviceId].count += 1;
+    entradaServicesList(e).forEach(function(s){
+      if(!byService[s.serviceId]) byService[s.serviceId] = { name: s.serviceName, total:0, count:0 };
+      byService[s.serviceId].total += Number(s.value)||0;
+      byService[s.serviceId].count += 1;
+    });
   });
   var serviceRows = Object.keys(byService).map(function(k){return byService[k];}).sort(function(a,b){ return b.total-a.total; });
   var maisRealizado = serviceRows.length ? serviceRows.slice().sort(function(a,b){return b.count-a.count;})[0] : null;
@@ -579,15 +618,13 @@ function pageIndicadores(){
   var manutContatadas = manutOportunidades.filter(function(e){ return e.contacted; });
   var taxaManut = manutOportunidades.length ? Math.round((manutContatadas.length/manutOportunidades.length)*100) : null;
 
-  var periodSelect = '<select data-action="ind-period">'
-    + opt('mes','Este mês',ui.indPeriod) + opt('mes-passado','Mês passado',ui.indPeriod)
-    + opt('3meses','Últimos 3 meses',ui.indPeriod) + opt('todos','Todo o período',ui.indPeriod)
-    + '</select>';
-
   return ''
   + '<div class="page-head"><div><span class="eyebrow">Análise</span><h1>Indicadores</h1>'
   + '<p class="page-sub">Desempenho do seu trabalho no período selecionado.</p></div>'
-  + '<div class="field" style="max-width:190px"><label>Período</label>'+periodSelect+'</div>'
+  + '<div class="filter-row">'
+  +   '<div class="field" style="max-width:130px"><label>Ano</label>'+yearSelectHtml('ind-year', ui.indYear)+'</div>'
+  +   '<div class="field" style="max-width:170px"><label>Mês</label>'+monthSelectHtml('ind-month', ui.indMonth)+'</div>'
+  + '</div>'
   + '</div>'
   + '<div class="stat-grid">'
   +   statTile('Faturamento', fmtBRL(faturamento), null, 'accent')
@@ -937,8 +974,7 @@ function initEvents(){
     else if(action==='delete-plano'){ deletePlano(id); }
     else if(action==='unlock-value'){
       var dd = ensureEntradaDraft();
-      var svcNow = SERVICE_BY_ID(dd.serviceId);
-      dd.value = (dd.value!=='' ? dd.value : (svcNow?svcNow.value:''));
+      dd.value = (dd.value!=='' ? dd.value : sumServicesValue(dd.serviceIds));
       dd.valueEdited = true;
       renderPage(currentRoute());
     }
@@ -957,9 +993,12 @@ function initEvents(){
     var el = e.target;
     var action = el.getAttribute && el.getAttribute('data-action');
     var form = el.closest && el.closest('form[data-form="entrada"]');
-    if(action==='service-change'){
+    if(action==='service-toggle'){
       var d = ensureEntradaDraft();
-      d.serviceId = el.value; d.valueEdited = false;
+      var idx = d.serviceIds.indexOf(el.value);
+      if(el.checked){ if(idx<0) d.serviceIds.push(el.value); }
+      else if(idx>=0){ d.serviceIds.splice(idx,1); }
+      d.valueEdited = false;
       renderPage(currentRoute());
     } else if(action==='value-input'){
       draft.entrada.value = el.value;
@@ -973,10 +1012,14 @@ function initEvents(){
       if(draft.entrada.hasManutencao) renderPage(currentRoute());
     } else if(action==='move-kanban-day'){
       moveKanbanDay(el.getAttribute('data-id'), el.value);
+    } else if(action==='dfc-year'){
+      ui.dfcYear = el.value; saveUi(); renderPage(currentRoute());
     } else if(action==='dfc-month'){
       ui.dfcMonth = el.value; saveUi(); renderPage(currentRoute());
-    } else if(action==='ind-period'){
-      ui.indPeriod = el.value; saveUi(); renderPage(currentRoute());
+    } else if(action==='ind-year'){
+      ui.indYear = el.value; saveUi(); renderPage(currentRoute());
+    } else if(action==='ind-month'){
+      ui.indMonth = el.value; saveUi(); renderPage(currentRoute());
     } else if(action==='anamnese-radio'){
       draft.anamnese.answers[el.getAttribute('data-key')].value = el.value;
       renderPage(currentRoute());
