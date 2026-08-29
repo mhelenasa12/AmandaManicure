@@ -149,6 +149,7 @@ input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 .page-head h1{font-size:26px}
 .page-head .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:700;margin-bottom:4px;display:block}
 .page-sub{color:var(--ink-soft);font-size:13.5px;margin-top:4px;max-width:60ch}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap}
 
 /* ============ Cards / layout ============ */
 .card{
@@ -201,6 +202,9 @@ textarea{resize:vertical;min-height:70px}
 .checkbox-row{display:flex;align-items:center;gap:9px;cursor:pointer}
 .checkbox-row input{accent-color:var(--accent);width:17px;height:17px}
 .checkbox-row span{font-size:13.5px;font-weight:700}
+.service-check-list{border:1px solid var(--border);border-radius:var(--radius-s);background:var(--surface-2);padding:6px 14px;max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+.service-check-list .checkbox-row{border-bottom:1px solid var(--border)}
+.service-check-list .checkbox-row:last-child{border-bottom:none}
 
 /* ============ Buttons ============ */
 .btn{
