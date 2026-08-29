@@ -316,6 +316,14 @@ details.anamnese-row .qa-body{padding:4px 16px 14px;border-top:1px solid var(--b
 .svc-actions{display:flex;gap:4px}
 .new-svc-form{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .new-svc-form input{width:auto;flex:1;min-width:140px}
+.plano-cat-block{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.plano-cat-block:last-of-type{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.plano-cat-row .svc-name{font-weight:700}
+.plano-sub-list{margin:2px 0 2px 20px;border-left:1px solid var(--border);padding-left:12px}
+.plano-sub-row{padding:7px 4px;border-bottom:none}
+.plano-sub-row .svc-name{font-weight:600;font-size:13px;color:var(--ink-soft)}
+.plano-sub-form{margin:8px 0 0 20px}
+.plano-sub-form input{min-width:120px}
 .badge-count{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-size:10.5px;padding:1px 6px;font-family:var(--font-mono)}
 .empty-state{text-align:center;padding:36px 16px;color:var(--ink-mute)}
 .empty-state .big{font-size:30px;margin-bottom:6px}
