@@ -847,7 +847,7 @@ function shellHtml(){
   +       navLink('indicadores','Indicadores')
   +       navLink('config','Configurações')
   +     '</nav>'
-  +     '<div class="sidebar-foot"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-panel">Bloquear painel</button></div>'
+  +     '<div class="sidebar-foot"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-panel">⏻ Sair</button></div>'
   +     '</div>'
   +   '</aside>'
   +   '<div class="main" id="main-col">'
