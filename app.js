@@ -17,6 +17,47 @@ function inRange(iso, start, end){ return iso>=start && iso<=end; }
 function opt(val,label,current){ return '<option value="'+val+'"'+(val===current?' selected':'')+'>'+escapeHtml(label)+'</option>'; }
 function capitalize(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
 
+/* ================= icons (inline SVG, feather-style) ================= */
+var ICON_PATHS = {
+  'home': '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'wallet': '<path d="M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2z"/><path d="M16 5H6a2 2 0 0 0-2 2"/><path d="M18 13h.01"/>',
+  'arrow-down-circle': '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/>',
+  'arrow-up-circle': '<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>',
+  'bar-chart-2': '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  'users': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'clipboard': '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>',
+  'calendar': '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  'trending-up': '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  'settings': '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  'log-out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  'user-plus': '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>',
+  'dollar-sign': '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  'scale': '<line x1="12" y1="3" x2="12" y2="21"/><path d="M7 21h10"/><path d="M5 7h6"/><path d="M13 7h6"/><path d="M5 7 2 13a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/>',
+  'flag': '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  'hash': '<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>',
+  'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  'refresh-cw': '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  'scissors': '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
+  'list': '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  'download': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  'upload': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  'edit-2': '<path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
+  'trash-2': '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
+  'check': '<polyline points="20 6 9 17 4 12"/>',
+  'menu': '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
+  'chevron-left': '<polyline points="15 18 9 12 15 6"/>',
+  'chevron-right': '<polyline points="9 18 15 12 9 6"/>',
+  'x': '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+};
+function icon(name, size, extraStyle){
+  var path = ICON_PATHS[name];
+  if(!path) return '';
+  var sz = size || 18;
+  var style = extraStyle ? ' style="'+extraStyle+'"' : '';
+  return '<svg viewBox="0 0 24 24" width="'+sz+'" height="'+sz+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'+style+'>'+path+'</svg>';
+}
+
 var MONTHS_LONG=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function currentYYYYMM(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
 function monthLabelFromYYYYMM(ym){ var p=ym.split('-'); return MONTHS_LONG[parseInt(p[1],10)-1]+' de '+p[0]; }
@@ -167,14 +208,14 @@ function navigate(route){ location.hash = '#/' + route; }
 function field(labelHtml, inputHtml){
   return '<div class="field"><label>'+labelHtml+'</label>'+inputHtml+'</div>';
 }
-function statTile(label, value, hint, variant, icon, colorHex){
+function statTile(label, value, hint, variant, iconName, colorHex){
   var cls = variant ? ' '+variant : '';
-  var iconHtml = icon ? '<span class="stat-ic">'+icon+'</span>' : '';
+  var icHtml = iconName ? '<span class="stat-ic"'+(colorHex?' style="color:'+colorHex+';opacity:.85"':'')+'>'+icon(iconName,20)+'</span>' : '';
   var valueStyle = colorHex ? ' style="color:'+colorHex+'"' : '';
-  return '<div class="stat-tile'+cls+'">'+iconHtml+'<span class="label">'+escapeHtml(label)+'</span><span class="value mono"'+valueStyle+'>'+escapeHtml(value)+'</span>'+(hint?'<span class="hint">'+escapeHtml(hint)+'</span>':'')+'</div>';
+  return '<div class="stat-tile'+cls+'">'+icHtml+'<span class="label">'+escapeHtml(label)+'</span><span class="value mono"'+valueStyle+'>'+escapeHtml(value)+'</span>'+(hint?'<span class="hint">'+escapeHtml(hint)+'</span>':'')+'</div>';
 }
-function cardHeadHtml(icon, title, extraHtml){
-  return '<div class="card-head"><h2><span class="h-ic">'+icon+'</span>'+escapeHtml(title)+'</h2>'+(extraHtml||'')+'</div>';
+function cardHeadHtml(iconName, title, extraHtml){
+  return '<div class="card-head"><h2><span class="h-ic">'+icon(iconName,15)+'</span>'+escapeHtml(title)+'</h2>'+(extraHtml||'')+'</div>';
 }
 function emptyState(msg){ return '<div class="empty-state"><div class="big">–</div>'+escapeHtml(msg)+'</div>'; }
 function barListHtml(items, max, variant){
@@ -188,9 +229,9 @@ function barListHtml(items, max, variant){
   }).join('');
   return '<div class="bar-list">'+rows+'</div>';
 }
-function quickAction(route,title,desc,icon){
+function quickAction(route,title,desc,iconName){
   return '<button type="button" class="card" data-action="nav" data-route="'+route+'">'
-   + '<h3 style="margin-bottom:6px;font-size:15px"><span class="h-ic">'+icon+'</span>'+escapeHtml(title)+' →</h3><p class="page-sub" style="margin:0">'+escapeHtml(desc)+'</p></button>';
+   + '<h3 style="margin-bottom:6px;font-size:15px"><span class="h-ic">'+icon(iconName,15)+'</span>'+escapeHtml(title)+' →</h3><p class="page-sub" style="margin:0">'+escapeHtml(desc)+'</p></button>';
 }
 
 /* ================= page: início ================= */
@@ -208,18 +249,18 @@ function pageInicio(){
   + '<div class="page-head"><div><span class="eyebrow">Visão geral</span><h1>Olá, '+escapeHtml(STATE.meta.profissional||'Amanda')+'</h1>'
   + '<p class="page-sub">Resumo de '+monthLabel+'. Use os atalhos abaixo para lançar um atendimento ou uma anamnese.</p></div></div>'
   + '<div class="stat-grid">'
-  +   statTile('Faturado no mês', fmtBRL(faturado), entradasMes.length+' atendimento(s)', 'accent', '↓')
-  +   statTile('Saídas no mês', fmtBRL(totalSaidas), saidasMes.length+' lançamento(s)', 'expense', '↑')
-  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'saldo positivo':'saldo negativo', caixa>=0?'good':'critical', '⚖')
-  +   statTile('Manutenções pendentes', String(pendentesManut), 'aguardando contato', pendentesManut>0?'warning':'', '⚑')
+  +   statTile('Faturado no mês', fmtBRL(faturado), entradasMes.length+' atendimento(s)', 'accent', 'dollar-sign')
+  +   statTile('Saídas no mês', fmtBRL(totalSaidas), saidasMes.length+' lançamento(s)', 'expense', 'arrow-up-circle')
+  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'saldo positivo':'saldo negativo', caixa>=0?'good':'critical', 'scale')
+  +   statTile('Manutenções pendentes', String(pendentesManut), 'aguardando contato', pendentesManut>0?'warning':'', 'flag')
   + '</div>'
   + '<div class="grid-3">'
-  +   quickAction('financeiro/entradas','Nova entrada','Registrar um atendimento e o valor recebido.','↓')
-  +   quickAction('financeiro/saidas','Nova saída','Lançar um pagamento a fornecedor.','↑')
-  +   quickAction('clientes/anamnese','Nova anamnese','Preencher a ficha de uma cliente nova.','✚')
+  +   quickAction('financeiro/entradas','Nova entrada','Registrar um atendimento e o valor recebido.','arrow-down-circle')
+  +   quickAction('financeiro/saidas','Nova saída','Lançar um pagamento a fornecedor.','arrow-up-circle')
+  +   quickAction('clientes/anamnese','Nova anamnese','Preencher a ficha de uma cliente nova.','user-plus')
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('⚑','Manutenções da semana','<button type="button" class="btn btn-secondary btn-sm" data-action="nav" data-route="clientes/manutencoes">Ver kanban</button>')
+  +   cardHeadHtml('calendar','Manutenções da semana','<button type="button" class="btn btn-secondary btn-sm" data-action="nav" data-route="clientes/manutencoes">Ver kanban</button>')
   +   (pendentesManut>0
         ? '<p class="page-sub">Você tem <strong>'+pendentesManut+'</strong> cliente(s) aguardando contato para agendar manutenção.</p>'
         : '<p class="page-sub">Nenhuma manutenção pendente de contato no momento.</p>')
@@ -243,7 +284,7 @@ function valueFieldHtml(d){
   if(d.valueEdited){
     return '<div class="actions-row"><input type="number" step="0.01" min="0" name="value" value="'+(d.value===''?'':d.value)+'" style="max-width:140px" data-action="value-input"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-value">usar valor calculado</button></div>';
   }
-  return '<div class="actions-row"><input type="text" value="'+fmtBRL(defaultTotal)+'" readonly style="max-width:140px;background:var(--surface-3)"><button type="button" class="btn btn-ghost btn-sm" data-action="unlock-value">✎ editar</button></div>';
+  return '<div class="actions-row"><input type="text" value="'+fmtBRL(defaultTotal)+'" readonly style="max-width:140px;background:var(--surface-3)"><button type="button" class="btn btn-ghost btn-sm" data-action="unlock-value">'+icon('edit-2',13)+' editar</button></div>';
 }
 function manutencaoBlockHtml(manutDate, weekOptions, chosen){
   var opts = weekOptions.map(function(w){
@@ -267,7 +308,7 @@ function entradasTableHtml(rows){
       + '<td>'+escapeHtml(entradaServicesLabel(e))+'</td>'
       + '<td class="num">'+fmtBRL(e.value)+'</td>'
       + '<td>'+manutCell+'</td>'
-      + '<td><button type="button" class="btn btn-ghost btn-icon" data-action="delete-entrada" data-id="'+e.id+'" aria-label="Excluir">✕</button></td>'
+      + '<td><button type="button" class="btn btn-ghost btn-icon" data-action="delete-entrada" data-id="'+e.id+'" aria-label="Excluir">'+icon('trash-2',14)+'</button></td>'
       + '</tr>';
   }).join('');
   return '<div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Serviço</th><th class="num">Valor</th><th>Manutenção</th><th></th></tr></thead><tbody>'+trs+'</tbody></table></div>';
@@ -312,7 +353,7 @@ function pageEntradas(){
    +   '</form>'
    + '</div>'
    + '<div class="card">'
-   +   cardHeadHtml('↓','Últimas entradas','<span class="pill pill-neutral">'+STATE.entradas.length+' no total</span>')
+   +   cardHeadHtml('arrow-down-circle','Últimas entradas','<span class="pill pill-neutral">'+STATE.entradas.length+' no total</span>')
    +   entradasTableHtml(rows)
    + '</div>';
 }
@@ -379,7 +420,7 @@ function saidasTableHtml(rows){
      + '<td class="num">'+fmtBRL(s.valor)+'</td>'
      + '<td>'+escapeHtml(s.formaPagamento||'—')+'</td>'
      + '<td><span class="pill pill-expense">'+escapeHtml(s.planoContaName||'—')+'</span></td>'
-     + '<td><button type="button" class="btn btn-ghost btn-icon" data-action="delete-saida" data-id="'+s.id+'" aria-label="Excluir">✕</button></td>'
+     + '<td><button type="button" class="btn btn-ghost btn-icon" data-action="delete-saida" data-id="'+s.id+'" aria-label="Excluir">'+icon('trash-2',14)+'</button></td>'
      + '</tr>';
   }).join('');
   return '<div class="table-wrap"><table><thead><tr><th>Data</th><th>Fornecedor</th><th class="num">Valor</th><th>Forma</th><th>Plano de contas</th><th></th></tr></thead><tbody>'+trs+'</tbody></table></div>';
@@ -408,7 +449,7 @@ function pageSaidas(){
   +   '</form>'
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('↑','Últimas saídas','<span class="pill pill-neutral">'+STATE.saidas.length+' no total</span>')
+  +   cardHeadHtml('arrow-up-circle','Últimas saídas','<span class="pill pill-neutral">'+STATE.saidas.length+' no total</span>')
   +   saidasTableHtml(rows)
   + '</div>';
 }
@@ -458,13 +499,13 @@ function pageDFC(){
   + '</div>'
   + '</div>'
   + '<div class="stat-grid">'
-  +   statTile('Faturou', fmtBRL(faturado), entradasP.length+' atendimento(s)', 'accent', '↓', '#0aa230')
-  +   statTile('Recebeu', fmtBRL(recebido), 'regime de caixa', 'accent', '✓')
-  +   statTile('Saídas', fmtBRL(totalSaidas), saidasP.length+' lançamento(s)', 'expense', '↑', '#ff0000')
-  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'positivo no período':'negativo no período', caixa>=0?'good':'critical', '⚖', '#00a7ff')
+  +   statTile('Faturou', fmtBRL(faturado), entradasP.length+' atendimento(s)', 'accent', 'dollar-sign', '#0aa230')
+  +   statTile('Recebeu', fmtBRL(recebido), 'regime de caixa', 'accent', 'check-circle')
+  +   statTile('Saídas', fmtBRL(totalSaidas), saidasP.length+' lançamento(s)', 'expense', 'arrow-up-circle', '#ff0000')
+  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'positivo no período':'negativo no período', caixa>=0?'good':'critical', 'scale', '#00a7ff')
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('▤','Saídas por plano de contas')
+  +   cardHeadHtml('bar-chart-2','Saídas por plano de contas')
   +   (planoRows.length ? barListHtml(planoRows.map(function(r){ return {label:r.name, value:r.total}; }), maxPlano, 'expense') : emptyState('Nenhuma saída neste período.'))
   + '</div>';
 }
@@ -556,7 +597,7 @@ function kanbanCardHtml(c){
    + '<span class="kmeta">manutenção prevista: '+fmtDateBR(c.manutencaoDate)+'</span>'
    + '<div class="kcard-foot">'
    +   '<select data-action="move-kanban-day" data-id="'+c.id+'">'+opts+'</select>'
-   +   '<button type="button" class="btn btn-sm '+(c.contacted?'btn-secondary':'btn-primary')+'" data-action="toggle-contacted" data-id="'+c.id+'">'+(c.contacted?'Reabrir':'Contatada ✓')+'</button>'
+   +   '<button type="button" class="btn btn-sm '+(c.contacted?'btn-secondary':'btn-primary')+'" data-action="toggle-contacted" data-id="'+c.id+'">'+(c.contacted?'Reabrir':('Contatada '+icon('check',13)))+'</button>'
    + '</div>'
    + '</div>';
 }
@@ -578,9 +619,9 @@ function pageManutencoes(){
   + '<div class="page-head"><div><span class="eyebrow">Clientes</span><h1>Manutenções da Semana</h1>'
   + '<p class="page-sub">Clientes para avisar sobre manutenção, organizadas por dia de contato.</p></div></div>'
   + '<div class="week-nav">'
-  +   '<button type="button" class="btn btn-secondary btn-icon" data-action="week-prev" aria-label="Semana anterior">←</button>'
+  +   '<button type="button" class="btn btn-secondary btn-icon" data-action="week-prev" aria-label="Semana anterior">'+icon('chevron-left',16)+'</button>'
   +   '<span class="week-label">Semana de '+weekRangeLabel(weekStart)+'</span>'
-  +   '<button type="button" class="btn btn-secondary btn-icon" data-action="week-next" aria-label="Próxima semana">→</button>'
+  +   '<button type="button" class="btn btn-secondary btn-icon" data-action="week-next" aria-label="Próxima semana">'+icon('chevron-right',16)+'</button>'
   +   '<button type="button" class="btn btn-ghost btn-sm" data-action="week-today">Semana atual</button>'
   + '</div>'
   + '<div class="kanban">'+cols+'</div>';
@@ -652,17 +693,17 @@ function pageIndicadores(){
   + '</div>'
   + '</div>'
   + '<div class="stat-grid">'
-  +   statTile('Faturamento', fmtBRL(faturamento), null, 'accent', '↓')
-  +   statTile('Atendimentos', String(atendimentos), null, '', '✓')
-  +   statTile('Ticket médio', fmtBRL(ticketMedio), null, '', '≈')
-  +   statTile('Serviço mais realizado', maisRealizado?maisRealizado.name:'—', maisRealizado?(maisRealizado.count+' vez(es)'):null, 'accent', '★')
+  +   statTile('Faturamento', fmtBRL(faturamento), null, 'accent', 'dollar-sign')
+  +   statTile('Atendimentos', String(atendimentos), null, '', 'check-circle')
+  +   statTile('Ticket médio', fmtBRL(ticketMedio), null, '', 'hash')
+  +   statTile('Serviço mais realizado', maisRealizado?maisRealizado.name:'—', maisRealizado?(maisRealizado.count+' vez(es)'):null, 'accent', 'star')
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('▤','Faturamento por serviço')
+  +   cardHeadHtml('bar-chart-2','Faturamento por serviço')
   +   (serviceRows.length ? barListHtml(serviceRows.map(function(r){ return {label:r.name, value:r.total, sub:r.count+' atendimento(s)'}; }), maxServiceTotal, 'accent') : emptyState('Nenhum atendimento neste período.'))
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('↻','Taxa de retorno para manutenção')
+  +   cardHeadHtml('refresh-cw','Taxa de retorno para manutenção')
   +   (taxaManut===null
       ? '<p class="page-sub">Nenhuma manutenção agendada neste período ainda.</p>'
       : '<div class="stat-tile" style="max-width:260px"><span class="label">Contatadas / agendadas</span><span class="value mono">'+taxaManut+'%</span><span class="hint">'+manutContatadas.length+' de '+manutOportunidades.length+' manutenções contatadas</span></div>')
@@ -686,8 +727,8 @@ function servicesListHtml(){
      + '<span class="svc-name">'+escapeHtml(s.name)+'</span>'
      + '<span class="svc-value mono">'+fmtBRL(s.value)+'</span>'
      + '<div class="svc-actions">'
-     +   '<button type="button" class="btn btn-ghost btn-icon" data-action="edit-service" data-id="'+s.id+'" aria-label="Editar">✎</button>'
-     +   '<button type="button" class="btn btn-ghost btn-icon" data-action="delete-service" data-id="'+s.id+'" aria-label="Excluir">✕</button>'
+     +   '<button type="button" class="btn btn-ghost btn-icon" data-action="edit-service" data-id="'+s.id+'" aria-label="Editar">'+icon('edit-2',14)+'</button>'
+     +   '<button type="button" class="btn btn-ghost btn-icon" data-action="delete-service" data-id="'+s.id+'" aria-label="Excluir">'+icon('trash-2',14)+'</button>'
      + '</div></div>';
   }).join('');
 }
@@ -703,8 +744,8 @@ function planoRowHtml(p, extraClass){
   return '<div class="svc-row '+extraClass+'">'
    + '<span class="svc-name">'+escapeHtml(p.name)+'</span>'
    + '<div class="svc-actions">'
-   +   '<button type="button" class="btn btn-ghost btn-icon" data-action="edit-plano" data-id="'+p.id+'" aria-label="Editar">✎</button>'
-   +   '<button type="button" class="btn btn-ghost btn-icon" data-action="delete-plano" data-id="'+p.id+'" aria-label="Excluir">✕</button>'
+   +   '<button type="button" class="btn btn-ghost btn-icon" data-action="edit-plano" data-id="'+p.id+'" aria-label="Editar">'+icon('edit-2',14)+'</button>'
+   +   '<button type="button" class="btn btn-ghost btn-icon" data-action="delete-plano" data-id="'+p.id+'" aria-label="Excluir">'+icon('trash-2',14)+'</button>'
    + '</div></div>';
 }
 function planosListHtml(){
@@ -729,7 +770,7 @@ function pageConfig(){
   + '<div class="page-head"><div><span class="eyebrow">Configurações</span><h1>Serviços e plano de contas</h1>'
   + '<p class="page-sub">Ajuste os valores dos seus serviços e as categorias usadas nas saídas.</p></div></div>'
   + '<div class="card">'
-  +   cardHeadHtml('✂','Serviços')
+  +   cardHeadHtml('scissors','Serviços')
   +   servicesListHtml()
   +   '<form data-form="novo-servico" class="new-svc-form">'
   +     '<input type="text" name="name" placeholder="Nome do novo serviço" required>'
@@ -738,7 +779,7 @@ function pageConfig(){
   +   '</form>'
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('§','Plano de contas')
+  +   cardHeadHtml('list','Plano de contas')
   +   '<p class="help" style="margin-bottom:10px">Organize por categoria e, se quiser, crie subcategorias dentro de cada uma.</p>'
   +   planosListHtml()
   +   '<form data-form="novo-plano" class="new-svc-form">'
@@ -747,11 +788,11 @@ function pageConfig(){
   +   '</form>'
   + '</div>'
   + '<div class="card">'
-  +   cardHeadHtml('⬇','Backup dos dados')
+  +   cardHeadHtml('download','Backup dos dados')
   +   '<p class="page-sub" style="margin-bottom:14px">Baixe uma cópia de segurança com todos os dados do painel (serviços, plano de contas, entradas, saídas e anamneses), ou restaure a partir de um arquivo salvo anteriormente.</p>'
   +   '<div class="actions-row">'
-  +     '<button type="button" class="btn btn-primary" data-action="backup-download">⬇ Baixar backup (.json)</button>'
-  +     '<button type="button" class="btn btn-secondary" data-action="backup-restore-trigger">⬆ Restaurar backup</button>'
+  +     '<button type="button" class="btn btn-primary" data-action="backup-download">'+icon('download',15)+' Baixar backup (.json)</button>'
+  +     '<button type="button" class="btn btn-secondary" data-action="backup-restore-trigger">'+icon('upload',15)+' Restaurar backup</button>'
   +     '<input type="file" accept="application/json" id="backup-file-input" data-action="backup-file-change" style="display:none">'
   +   '</div>'
   +   '<p class="help" style="margin-top:10px">Atenção: restaurar um backup substitui todos os dados atuais do painel pelos dados do arquivo escolhido.</p>'
@@ -882,14 +923,14 @@ function renderPage(route){
   else if(route==='config') el.innerHTML = pageConfig();
   else el.innerHTML = pageInicio();
 }
-function navLink(route, label, icon){
+function navLink(route, label, iconName){
   var r = currentRoute();
   var active = r===route ? ' active' : '';
-  var iconHtml = icon ? '<span class="ic">'+icon+'</span>' : '';
+  var iconHtml = iconName ? '<span class="ic">'+icon(iconName,16)+'</span>' : '';
   return '<button type="button" class="nav-link'+active+'" data-action="nav" data-route="'+route+'">'+iconHtml+label+'</button>';
 }
-function navGroupLabel(text, icon){
-  var iconHtml = icon ? '<span class="ic">'+icon+'</span>' : '';
+function navGroupLabel(text, iconName){
+  var iconHtml = iconName ? '<span class="ic">'+icon(iconName,14)+'</span>' : '';
   return '<div class="nav-link" style="cursor:default;color:var(--ink-mute);font-size:11px;text-transform:uppercase;letter-spacing:.07em;padding-top:12px;padding-bottom:2px">'+iconHtml+text+'</div>';
 }
 function shellHtml(){
@@ -900,22 +941,22 @@ function shellHtml(){
   +     '<div class="brand">'
   +       '<img class="brand-mark" src="/logo.jpg" alt="Amanda Pereira - Arts in Nails">'
   +       '<div class="brand-text"><strong>'+escapeHtml(STATE.meta.negocio||'Amanda Nails')+'</strong><span>Painel de gestão</span></div>'
-  +       '<button type="button" class="mob-toggle" data-action="mobile-toggle" aria-label="Abrir menu">☰</button>'
+  +       '<button type="button" class="mob-toggle" data-action="mobile-toggle" aria-label="Abrir menu">'+icon('menu',18)+'</button>'
   +     '</div>'
   +     '<div class="nav-wrap"><nav class="nav">'
-  +       navLink('inicio','Início','⌂')
+  +       navLink('inicio','Início','home')
   +       '<div class="nav-group">'
-  +         navGroupLabel('Financeiro','§')
-  +         '<div class="nav-sub">'+navLink('financeiro/entradas','Entradas','↓')+navLink('financeiro/saidas','Saídas','↑')+navLink('financeiro/dfc','DFC','▤')+'</div>'
+  +         navGroupLabel('Financeiro','wallet')
+  +         '<div class="nav-sub">'+navLink('financeiro/entradas','Entradas','arrow-down-circle')+navLink('financeiro/saidas','Saídas','arrow-up-circle')+navLink('financeiro/dfc','DFC','bar-chart-2')+'</div>'
   +       '</div>'
   +       '<div class="nav-group">'
-  +         navGroupLabel('Clientes','✚')
-  +         '<div class="nav-sub">'+navLink('clientes/anamnese','Anamnese','✚')+navLink('clientes/manutencoes','Manutenções da Semana','⚑')+'</div>'
+  +         navGroupLabel('Clientes','users')
+  +         '<div class="nav-sub">'+navLink('clientes/anamnese','Anamnese','clipboard')+navLink('clientes/manutencoes','Manutenções da Semana','calendar')+'</div>'
   +       '</div>'
-  +       navLink('indicadores','Indicadores','↗')
-  +       navLink('config','Configurações','⚙')
+  +       navLink('indicadores','Indicadores','trending-up')
+  +       navLink('config','Configurações','settings')
   +     '</nav>'
-  +     '<div class="sidebar-foot"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-panel">⏻ Sair</button></div>'
+  +     '<div class="sidebar-foot"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-panel">'+icon('log-out',16)+' Sair</button></div>'
   +     '</div>'
   +   '</aside>'
   +   '<div class="main" id="main-col">'
