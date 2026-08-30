@@ -167,9 +167,14 @@ function navigate(route){ location.hash = '#/' + route; }
 function field(labelHtml, inputHtml){
   return '<div class="field"><label>'+labelHtml+'</label>'+inputHtml+'</div>';
 }
-function statTile(label, value, hint, variant){
+function statTile(label, value, hint, variant, icon, colorHex){
   var cls = variant ? ' '+variant : '';
-  return '<div class="stat-tile'+cls+'"><span class="label">'+escapeHtml(label)+'</span><span class="value mono">'+escapeHtml(value)+'</span>'+(hint?'<span class="hint">'+escapeHtml(hint)+'</span>':'')+'</div>';
+  var iconHtml = icon ? '<span class="stat-ic">'+icon+'</span>' : '';
+  var valueStyle = colorHex ? ' style="color:'+colorHex+'"' : '';
+  return '<div class="stat-tile'+cls+'">'+iconHtml+'<span class="label">'+escapeHtml(label)+'</span><span class="value mono"'+valueStyle+'>'+escapeHtml(value)+'</span>'+(hint?'<span class="hint">'+escapeHtml(hint)+'</span>':'')+'</div>';
+}
+function cardHeadHtml(icon, title, extraHtml){
+  return '<div class="card-head"><h2><span class="h-ic">'+icon+'</span>'+escapeHtml(title)+'</h2>'+(extraHtml||'')+'</div>';
 }
 function emptyState(msg){ return '<div class="empty-state"><div class="big">–</div>'+escapeHtml(msg)+'</div>'; }
 function barListHtml(items, max, variant){
@@ -183,9 +188,9 @@ function barListHtml(items, max, variant){
   }).join('');
   return '<div class="bar-list">'+rows+'</div>';
 }
-function quickAction(route,title,desc){
+function quickAction(route,title,desc,icon){
   return '<button type="button" class="card" data-action="nav" data-route="'+route+'">'
-   + '<h3 style="margin-bottom:6px;font-size:15px">'+escapeHtml(title)+' →</h3><p class="page-sub" style="margin:0">'+escapeHtml(desc)+'</p></button>';
+   + '<h3 style="margin-bottom:6px;font-size:15px"><span class="h-ic">'+icon+'</span>'+escapeHtml(title)+' →</h3><p class="page-sub" style="margin:0">'+escapeHtml(desc)+'</p></button>';
 }
 
 /* ================= page: início ================= */
@@ -203,18 +208,18 @@ function pageInicio(){
   + '<div class="page-head"><div><span class="eyebrow">Visão geral</span><h1>Olá, '+escapeHtml(STATE.meta.profissional||'Amanda')+'</h1>'
   + '<p class="page-sub">Resumo de '+monthLabel+'. Use os atalhos abaixo para lançar um atendimento ou uma anamnese.</p></div></div>'
   + '<div class="stat-grid">'
-  +   statTile('Faturado no mês', fmtBRL(faturado), entradasMes.length+' atendimento(s)', 'accent')
-  +   statTile('Saídas no mês', fmtBRL(totalSaidas), saidasMes.length+' lançamento(s)', 'expense')
-  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'saldo positivo':'saldo negativo', caixa>=0?'good':'critical')
-  +   statTile('Manutenções pendentes', String(pendentesManut), 'aguardando contato', pendentesManut>0?'warning':'')
+  +   statTile('Faturado no mês', fmtBRL(faturado), entradasMes.length+' atendimento(s)', 'accent', '↓')
+  +   statTile('Saídas no mês', fmtBRL(totalSaidas), saidasMes.length+' lançamento(s)', 'expense', '↑')
+  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'saldo positivo':'saldo negativo', caixa>=0?'good':'critical', '⚖')
+  +   statTile('Manutenções pendentes', String(pendentesManut), 'aguardando contato', pendentesManut>0?'warning':'', '⚑')
   + '</div>'
   + '<div class="grid-3">'
-  +   quickAction('financeiro/entradas','Nova entrada','Registrar um atendimento e o valor recebido.')
-  +   quickAction('financeiro/saidas','Nova saída','Lançar um pagamento a fornecedor.')
-  +   quickAction('clientes/anamnese','Nova anamnese','Preencher a ficha de uma cliente nova.')
+  +   quickAction('financeiro/entradas','Nova entrada','Registrar um atendimento e o valor recebido.','↓')
+  +   quickAction('financeiro/saidas','Nova saída','Lançar um pagamento a fornecedor.','↑')
+  +   quickAction('clientes/anamnese','Nova anamnese','Preencher a ficha de uma cliente nova.','✚')
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Manutenções da semana</h2><button type="button" class="btn btn-secondary btn-sm" data-action="nav" data-route="clientes/manutencoes">Ver kanban</button></div>'
+  +   cardHeadHtml('⚑','Manutenções da semana','<button type="button" class="btn btn-secondary btn-sm" data-action="nav" data-route="clientes/manutencoes">Ver kanban</button>')
   +   (pendentesManut>0
         ? '<p class="page-sub">Você tem <strong>'+pendentesManut+'</strong> cliente(s) aguardando contato para agendar manutenção.</p>'
         : '<p class="page-sub">Nenhuma manutenção pendente de contato no momento.</p>')
@@ -307,7 +312,7 @@ function pageEntradas(){
    +   '</form>'
    + '</div>'
    + '<div class="card">'
-   +   '<div class="card-head"><h2>Últimas entradas</h2><span class="pill pill-neutral">'+STATE.entradas.length+' no total</span></div>'
+   +   cardHeadHtml('↓','Últimas entradas','<span class="pill pill-neutral">'+STATE.entradas.length+' no total</span>')
    +   entradasTableHtml(rows)
    + '</div>';
 }
@@ -403,7 +408,7 @@ function pageSaidas(){
   +   '</form>'
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Últimas saídas</h2><span class="pill pill-neutral">'+STATE.saidas.length+' no total</span></div>'
+  +   cardHeadHtml('↑','Últimas saídas','<span class="pill pill-neutral">'+STATE.saidas.length+' no total</span>')
   +   saidasTableHtml(rows)
   + '</div>';
 }
@@ -453,13 +458,13 @@ function pageDFC(){
   + '</div>'
   + '</div>'
   + '<div class="stat-grid">'
-  +   statTile('Faturou', fmtBRL(faturado), entradasP.length+' atendimento(s)', 'accent')
-  +   statTile('Recebeu', fmtBRL(recebido), 'regime de caixa', 'accent')
-  +   statTile('Saídas', fmtBRL(totalSaidas), saidasP.length+' lançamento(s)', 'expense')
-  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'positivo no período':'negativo no período', caixa>=0?'good':'critical')
+  +   statTile('Faturou', fmtBRL(faturado), entradasP.length+' atendimento(s)', 'accent', '↓', '#0aa230')
+  +   statTile('Recebeu', fmtBRL(recebido), 'regime de caixa', 'accent', '✓')
+  +   statTile('Saídas', fmtBRL(totalSaidas), saidasP.length+' lançamento(s)', 'expense', '↑', '#ff0000')
+  +   statTile('Geração de caixa', fmtBRL(caixa), caixa>=0?'positivo no período':'negativo no período', caixa>=0?'good':'critical', '⚖', '#00a7ff')
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Saídas por plano de contas</h2></div>'
+  +   cardHeadHtml('▤','Saídas por plano de contas')
   +   (planoRows.length ? barListHtml(planoRows.map(function(r){ return {label:r.name, value:r.total}; }), maxPlano, 'expense') : emptyState('Nenhuma saída neste período.'))
   + '</div>';
 }
@@ -647,17 +652,17 @@ function pageIndicadores(){
   + '</div>'
   + '</div>'
   + '<div class="stat-grid">'
-  +   statTile('Faturamento', fmtBRL(faturamento), null, 'accent')
-  +   statTile('Atendimentos', String(atendimentos), null, '')
-  +   statTile('Ticket médio', fmtBRL(ticketMedio), null, '')
-  +   statTile('Serviço mais realizado', maisRealizado?maisRealizado.name:'—', maisRealizado?(maisRealizado.count+' vez(es)'):null, 'accent')
+  +   statTile('Faturamento', fmtBRL(faturamento), null, 'accent', '↓')
+  +   statTile('Atendimentos', String(atendimentos), null, '', '✓')
+  +   statTile('Ticket médio', fmtBRL(ticketMedio), null, '', '≈')
+  +   statTile('Serviço mais realizado', maisRealizado?maisRealizado.name:'—', maisRealizado?(maisRealizado.count+' vez(es)'):null, 'accent', '★')
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Faturamento por serviço</h2></div>'
+  +   cardHeadHtml('▤','Faturamento por serviço')
   +   (serviceRows.length ? barListHtml(serviceRows.map(function(r){ return {label:r.name, value:r.total, sub:r.count+' atendimento(s)'}; }), maxServiceTotal, 'accent') : emptyState('Nenhum atendimento neste período.'))
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Taxa de retorno para manutenção</h2></div>'
+  +   cardHeadHtml('↻','Taxa de retorno para manutenção')
   +   (taxaManut===null
       ? '<p class="page-sub">Nenhuma manutenção agendada neste período ainda.</p>'
       : '<div class="stat-tile" style="max-width:260px"><span class="label">Contatadas / agendadas</span><span class="value mono">'+taxaManut+'%</span><span class="hint">'+manutContatadas.length+' de '+manutOportunidades.length+' manutenções contatadas</span></div>')
@@ -724,7 +729,7 @@ function pageConfig(){
   + '<div class="page-head"><div><span class="eyebrow">Configurações</span><h1>Serviços e plano de contas</h1>'
   + '<p class="page-sub">Ajuste os valores dos seus serviços e as categorias usadas nas saídas.</p></div></div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Serviços</h2></div>'
+  +   cardHeadHtml('✂','Serviços')
   +   servicesListHtml()
   +   '<form data-form="novo-servico" class="new-svc-form">'
   +     '<input type="text" name="name" placeholder="Nome do novo serviço" required>'
@@ -733,7 +738,7 @@ function pageConfig(){
   +   '</form>'
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Plano de contas</h2></div>'
+  +   cardHeadHtml('§','Plano de contas')
   +   '<p class="help" style="margin-bottom:10px">Organize por categoria e, se quiser, crie subcategorias dentro de cada uma.</p>'
   +   planosListHtml()
   +   '<form data-form="novo-plano" class="new-svc-form">'
@@ -742,7 +747,7 @@ function pageConfig(){
   +   '</form>'
   + '</div>'
   + '<div class="card">'
-  +   '<div class="card-head"><h2>Backup dos dados</h2></div>'
+  +   cardHeadHtml('⬇','Backup dos dados')
   +   '<p class="page-sub" style="margin-bottom:14px">Baixe uma cópia de segurança com todos os dados do painel (serviços, plano de contas, entradas, saídas e anamneses), ou restaure a partir de um arquivo salvo anteriormente.</p>'
   +   '<div class="actions-row">'
   +     '<button type="button" class="btn btn-primary" data-action="backup-download">⬇ Baixar backup (.json)</button>'
@@ -877,13 +882,15 @@ function renderPage(route){
   else if(route==='config') el.innerHTML = pageConfig();
   else el.innerHTML = pageInicio();
 }
-function navLink(route, label){
+function navLink(route, label, icon){
   var r = currentRoute();
   var active = r===route ? ' active' : '';
-  return '<button type="button" class="nav-link'+active+'" data-action="nav" data-route="'+route+'">'+label+'</button>';
+  var iconHtml = icon ? '<span class="ic">'+icon+'</span>' : '';
+  return '<button type="button" class="nav-link'+active+'" data-action="nav" data-route="'+route+'">'+iconHtml+label+'</button>';
 }
-function navGroupLabel(text){
-  return '<div class="nav-link" style="cursor:default;color:var(--ink-mute);font-size:11px;text-transform:uppercase;letter-spacing:.07em;padding-top:12px;padding-bottom:2px">'+text+'</div>';
+function navGroupLabel(text, icon){
+  var iconHtml = icon ? '<span class="ic">'+icon+'</span>' : '';
+  return '<div class="nav-link" style="cursor:default;color:var(--ink-mute);font-size:11px;text-transform:uppercase;letter-spacing:.07em;padding-top:12px;padding-bottom:2px">'+iconHtml+text+'</div>';
 }
 function shellHtml(){
   var mobileOpenClass = ui.mobileNavOpen ? ' open' : '';
@@ -896,17 +903,17 @@ function shellHtml(){
   +       '<button type="button" class="mob-toggle" data-action="mobile-toggle" aria-label="Abrir menu">☰</button>'
   +     '</div>'
   +     '<div class="nav-wrap"><nav class="nav">'
-  +       navLink('inicio','Início')
+  +       navLink('inicio','Início','⌂')
   +       '<div class="nav-group">'
-  +         navGroupLabel('Financeiro')
-  +         '<div class="nav-sub">'+navLink('financeiro/entradas','Entradas')+navLink('financeiro/saidas','Saídas')+navLink('financeiro/dfc','DFC')+'</div>'
+  +         navGroupLabel('Financeiro','§')
+  +         '<div class="nav-sub">'+navLink('financeiro/entradas','Entradas','↓')+navLink('financeiro/saidas','Saídas','↑')+navLink('financeiro/dfc','DFC','▤')+'</div>'
   +       '</div>'
   +       '<div class="nav-group">'
-  +         navGroupLabel('Clientes')
-  +         '<div class="nav-sub">'+navLink('clientes/anamnese','Anamnese')+navLink('clientes/manutencoes','Manutenções da Semana')+'</div>'
+  +         navGroupLabel('Clientes','✚')
+  +         '<div class="nav-sub">'+navLink('clientes/anamnese','Anamnese','✚')+navLink('clientes/manutencoes','Manutenções da Semana','⚑')+'</div>'
   +       '</div>'
-  +       navLink('indicadores','Indicadores')
-  +       navLink('config','Configurações')
+  +       navLink('indicadores','Indicadores','↗')
+  +       navLink('config','Configurações','⚙')
   +     '</nav>'
   +     '<div class="sidebar-foot"><button type="button" class="btn btn-ghost btn-sm" data-action="lock-panel">⏻ Sair</button></div>'
   +     '</div>'
